@@ -1,0 +1,18 @@
+version: "3.2"
+services:
+  treasureNet_mqservice:
+    image: treasurenet/mqservice:1
+    network_mode: "host"
+    restart: unless-stopped
+    container_name: mqservice
+    environment:
+      - PORT=3016
+      - SECRET_KEY=S44tRlCHinE4ratraSaRipr5YeWRaylWruWlvAcoqevuFRethL
+      - CLOUDAMQP_URL=amqp://127.0.0.1:3014
+      - EVM_ENDPOINT=http://127.0.0.1:8545
+      - PRIVATEKEY=2ee43982d718a237c18d4b161f089586b3eff1786330d91f7caf7a1cf55dca9f
+      # - TNGATEWAY_ACCESS_TOKEN_URL=https://tngateway.testnet.treasurenet.io/oauth/access_token
+      # - TNGATEWAY_CLIENT_ID=test
+      # - TNGATEWAY_CLIENT_SECRET=36f028580bb02cc8272a9a020f4200e346e276ae664e45ee80745574e2f5ab80
+      # - TNGATEWAY_SCOPE=test
+      # - TNGATEWAY_API_URL=https://tngateway.testnet.treasurenet.io/api

@@ -1,0 +1,7 @@
+version: "3.2"
+services:
+  treasureNet_mqservice:
+    image: hetu/mqservice:1
+    network_mode: "host"
+    restart: unless-stopped
+    container_name: mqservice
