@@ -21,24 +21,21 @@ const tokenDistribution = async () => {
     async function doWork(msg) {
         const body = msg.content.toString();
         try {
-            const { sid, tokenName, tokenSymbol, tokenDecimals, initialSupply, dropRatio } = JSON.parse(body);
+            const { account: creatorAddress, tokenName, tokenSymbol, initialSupply, userWeights } = JSON.parse(body);
             
             // 1. 创建代币
             const factoryContract = new web3.eth.Contract(
-                require('../../abi/ERC20FactoryWithInitialMint.json'),
+                require('../../abi/MemeTokenFactory.json'),
                 config.contract.factoryAddress
             );
-
-            // 计算总供应量（考虑小数位）
-            const totalSupply = initialSupply * (10 ** tokenDecimals);
             
             // 调用工厂合约创建代币
-            const createTokenTx = factoryContract.methods.createToken(
+            const createTokenTx = factoryContract.methods.createMemeToken(
                 tokenName,
                 tokenSymbol,
-                tokenDecimals,
-                totalSupply,
-                account.address // 初始代币持有者地址
+                initialSupply,
+                10, // creatorFeePercent - 10%
+                creatorAddress // 使用消息中的account作为创建者地址
             );
 
             // 获取交易参数
@@ -67,35 +64,37 @@ const tokenDistribution = async () => {
 
             // 2. 分发代币
             const tokenContract = new web3.eth.Contract(
-                require('../../abi/ERC20Base.json'),
+                require('../../abi/MemeToken.json'),
                 tokenAddress
             );
 
-            // 计算每个用户应得的代币数量
-            const totalWeight = Object.values(dropRatio).reduce((a, b) => a + b, 0);
+            // 将userWeights转换为地址和权重的对应关系
+            // 注意：这里需要根据实际情况将user1, user2等转换为实际的以太坊地址
+            const recipients = Object.keys(userWeights);
+            const weights = Object.values(userWeights).map(weight => Math.floor(weight * 100)); // 将小数转换为整数权重
             
-            for (const [userAddress, weight] of Object.entries(dropRatio)) {
-                const userAmount = Math.floor((weight / totalWeight) * totalSupply);
-                
-                // 调用代币合约的transfer方法
-                const transferTx = tokenContract.methods.transfer(userAddress, userAmount);
-                
-                // 获取交易参数
-                const transferData = transferTx.encodeABI();
-                const transferGas = await transferTx.estimateGas({ from: account.address });
-                const transferGasPrice = await web3.eth.getGasPrice();
-                const transferNonce = await web3.eth.getTransactionCount(account.address);
+            // 调用代币合约的distributeByWeight方法
+            const distributeTx = tokenContract.methods.distributeByWeight(
+                recipients,
+                weights,
+                initialSupply
+            );
+            
+            // 获取交易参数
+            const distributeData = distributeTx.encodeABI();
+            const distributeGas = await distributeTx.estimateGas({ from: account.address });
+            const distributeGasPrice = await web3.eth.getGasPrice();
+            const distributeNonce = await web3.eth.getTransactionCount(account.address);
 
-                // 发送转账交易
-                await web3.eth.sendTransaction({
-                    from: account.address,
-                    to: tokenAddress,
-                    data: transferData,
-                    gas: transferGas,
-                    gasPrice: transferGasPrice,
-                    nonce: transferNonce
-                });
-            }
+            // 发送分发交易
+            await web3.eth.sendTransaction({
+                from: account.address,
+                to: tokenAddress,
+                data: distributeData,
+                gas: distributeGas,
+                gasPrice: distributeGasPrice,
+                nonce: distributeNonce
+            });
 
             this.ack(msg);
         } catch (e) {
@@ -121,4 +120,4 @@ const tokenDistribution = async () => {
 
 module.exports = async () => {
     await tokenDistribution();
-}; 
+};

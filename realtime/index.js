@@ -5,10 +5,10 @@
  * Desc
  */
 
-const faucetOnchain = require('./faucet');
+// const faucetOnchain = require('./faucet');
 const tokenDistribution = require('./tokenDistribution');
 
 module.exports = async () => {
-    await faucetOnchain();
+    // await faucetOnchain();
     await tokenDistribution();
 };
